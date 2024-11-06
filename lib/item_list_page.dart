@@ -1,8 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_shop/constants.dart';
+import 'package:flutter_shop/item_basket_page.dart';
 import 'package:flutter_shop/item_details_page.dart';
 import 'package:flutter_shop/models/product.dart';
+import 'package:flutter_shop/my_order_list_page.dart';
 
 class ItemListPage extends StatefulWidget {
   const ItemListPage({super.key});
@@ -50,6 +52,36 @@ class _ItemListPageState extends State<ItemListPage> {
         appBar: AppBar(
           title: const Text("제품 리스트"),
           centerTitle: true,
+          actions: [
+            IconButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) {
+                      return const MyOrderListPage();
+                    },
+                  ),
+                );
+              },
+              icon: const Icon(
+                Icons.account_circle,
+              ),
+            ),
+            IconButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) {
+                      return const ItemBasketPage();
+                    },
+                  ),
+                );
+              },
+              icon: const Icon(
+                Icons.shopping_cart,
+              ),
+            ),
+          ],
         ),
         body: GridView.builder(
           itemCount: productList.length,
