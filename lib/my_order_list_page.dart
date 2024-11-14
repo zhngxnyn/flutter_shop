@@ -31,9 +31,9 @@ class _MyOrderListPageState extends State<MyOrderListPage> {
     ),
   ];
 
-  List<Order> orderList = [
-    Order(
-      orderId: 1,
+  List<ProductOrder> orderList = [
+    ProductOrder(
+      // orderId: 1,
       productNo: 1,
       orderDate: "2023-11-24",
       orderNo: "20231114-123456123",
@@ -42,8 +42,8 @@ class _MyOrderListPageState extends State<MyOrderListPage> {
       paymentStatus: "completed",
       deliveryStatus: "delivering",
     ),
-    Order(
-      orderId: 2,
+    ProductOrder(
+      // orderId: 2,
       productNo: 4,
       orderDate: "2023-11-24",
       orderNo: "20231114-141020312",
