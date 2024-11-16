@@ -1,5 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_shop/constants.dart';
 import 'package:flutter_shop/enums/delivery_status.dart';
 import 'package:flutter_shop/enums/payment_status.dart';
@@ -16,48 +18,13 @@ class MyOrderListPage extends StatefulWidget {
 }
 
 class _MyOrderListPageState extends State<MyOrderListPage> {
-  List<Product> productList = [
-    Product(
-      productNo: 1,
-      productName: "노트북(Laptop)",
-      productImageUrl: "https://picsum.photos/id/1/300/300",
-      price: 600000,
-    ),
-    Product(
-      productNo: 4,
-      productName: "키보드(Keyboard)",
-      productImageUrl: "https://picsum.photos/id/60/300/300",
-      price: 50000,
-    ),
-  ];
-
-  List<ProductOrder> orderList = [
-    ProductOrder(
-      // orderId: 1,
-      productNo: 1,
-      orderDate: "2023-11-24",
-      orderNo: "20231114-123456123",
-      quantity: 2,
-      totalPrice: 1200000,
-      paymentStatus: "completed",
-      deliveryStatus: "delivering",
-    ),
-    ProductOrder(
-      // orderId: 2,
-      productNo: 4,
-      orderDate: "2023-11-24",
-      orderNo: "20231114-141020312",
-      quantity: 3,
-      totalPrice: 150000,
-      paymentStatus: "waiting",
-      deliveryStatus: "waiting",
-    ),
-  ];
-
-  List<Map<int, int>> quantityList = [
-    {1: 2},
-    {4: 3},
-  ];
+  // !먼저 주문 데이터 가져오기
+  final orderListRef = FirebaseFirestore.instance
+      .collection("orders")
+      .withConverter(
+        fromFirestore: (snapshot, _) => ProductOrder.fromJson(snapshot.data()!),
+        toFirestore: (product, _) => product.toJson(),
+      );
 
   @override
   void initState() {
@@ -71,29 +38,67 @@ class _MyOrderListPageState extends State<MyOrderListPage> {
         title: const Text("나의 주문목록"),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            ListView.builder(
-              itemCount: orderList.length,
-              shrinkWrap: true,
-              itemBuilder: (context, index) {
-                return orderContainer(
-                  productNo: orderList[index].productNo ?? 0,
-                  productName: productList[index].productName ?? "",
-                  productImageUrl: productList[index].productImageUrl ?? "",
-                  price: orderList[index].totalPrice ?? 0,
-                  quantity:
-                      quantityList[index][orderList[index].productNo] ?? 0,
-                  orderDate: orderList[index].orderDate ?? "",
-                  orderNo: orderList[index].orderNo ?? "",
-                  paymentStatus: orderList[index].paymentStatus ?? "",
-                  deliveryStatus: orderList[index].deliveryStatus ?? "",
-                );
-              },
-            ),
-          ],
-        ),
+      body: StreamBuilder(
+        // !주문 번호를 기준으로 내림차순 정렬
+        stream: orderListRef.orderBy("orderNo", descending: true).snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return ListView(
+              children: snapshot.data!.docs.map(
+                (document) {
+                  // !제품 상세 정보 가져오기(제품 번호를 기준으로 쿼리에서 가져와야 함)
+                  final productDetailsRef = FirebaseFirestore.instance
+                      .collection("products")
+                      .withConverter(
+                          fromFirestore: (snapshot, _) =>
+                              Product.fromJson(snapshot.data()!),
+                          toFirestore: (product, _) => product.toJson())
+                      .where("productNo", isEqualTo: document.data().productNo);
+                  return StreamBuilder(
+                    stream: productDetailsRef.snapshots(),
+                    builder: (context, productSnapshot) {
+                      if (productSnapshot.hasData) {
+                        Product product =
+                            productSnapshot.data!.docs.first.data();
+                        return orderContainer(
+                          productNo: document.data().productNo ?? 0,
+                          productName: product.productName ?? "",
+                          productImageUrl: product.productImageUrl ?? "",
+                          price: document.data().unitPrice ?? 0,
+                          quantity: document.data().quantity ?? 0,
+                          orderDate: document.data().orderDate ?? "",
+                          orderNo: document.data().orderNo ?? "",
+                          paymentStatus: document.data().paymentStatus ?? "",
+                          deliveryStatus: document.data().deliveryStatus ?? "",
+                        );
+                      } else if (productSnapshot.hasError) {
+                        return const Center(
+                          child: Text("오류가 발생했습니다."),
+                        );
+                      } else {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        );
+                      }
+                    },
+                  );
+                },
+              ).toList(), // children이 list로 들어가기 때문에
+            );
+          } else if (snapshot.hasError) {
+            return const Center(
+              child: Text("오류가 발생했습니다."),
+            );
+          } else {
+            return const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+              ),
+            );
+          }
+        },
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(20),
